@@ -41,22 +41,28 @@ const EVENT_STATES = {
  * ```
  */
 
+/** Helper method to get number of available events for a given state
+ * @param {events[]} events
+ * @param {string} state
+ * @returns Number, number of events matching given state
+ */
 const getNoOfEventsForState = (events, state) => {
   return events.filter((event) => event.state === state).length;
 };
 
+/** Helper method to get energy usage for a given period
+ * @param {events[]} events for period
+ * @param {number} lower bound of period
+ * @param {number} upper bound of period
+ * @returns Number, amount of energy used
+ */
 const calculateEnergyUsage = (profile, lowerBound, upperBound) => {
   const { initial, events } = profile;
 
-  if (
-    initial === EVENT_STATES.ON &&
-    (events.length === 0 || getNoOfEventsForState(events, EVENT_STATES.ON) === events.length)
-  )
+  //Validations
+  if (initial === EVENT_STATES.ON && (events.length === 0 || getNoOfEventsForState(events, EVENT_STATES.ON) === events.length))
     return MAX_IN_PERIOD;
-  if (
-    initial === EVENT_STATES.OFF &&
-    (events.length === 0 || getNoOfEventsForState(events, EVENT_STATES.OFF) === events.length)
-  )
+  if (initial === EVENT_STATES.OFF && (events.length === 0 || getNoOfEventsForState(events, EVENT_STATES.OFF) === events.length))
     return 0;
 
   let totalEnergyUsage = 0;
@@ -67,8 +73,10 @@ const calculateEnergyUsage = (profile, lowerBound, upperBound) => {
     for (let i = 0; i <= events.length - 1; i++) {
       let currentEvent = events[i];
       if (i === 0) {
+        // handle lower boundary difference
         if (initial === EVENT_STATES.ON) totalEnergyUsage += currentEvent.timestamp - lowerBound;
       } else if (i === events.length - 1 && currentEvent.state === EVENT_STATES.ON) {
+        // handle upper boundary difference
         totalEnergyUsage += upperBound - currentEvent.timestamp;
       } else {
         let previousEvent = events[i - 1];
@@ -81,6 +89,12 @@ const calculateEnergyUsage = (profile, lowerBound, upperBound) => {
 
   return totalEnergyUsage;
 };
+
+/**
+ * Returns energy usage for a day
+ * @param {object} profile
+ * @returns Number, amount of energy used
+ */
 const calculateEnergyUsageSimple = (profile) => {
   return calculateEnergyUsage(profile, 0, MAX_IN_PERIOD);
 };
@@ -117,18 +131,17 @@ const calculateEnergyUsageSimple = (profile) => {
  * and not manual intervention.
  */
 
+/**
+ * Returns energy saved for a given day
+ * @param {object} profile
+ * @returns int
+ */
 const calculateEnergySavings = (profile) => {
   const { initial, events } = profile;
-  //Edge-cases
-  if (
-    initial === EVENT_STATES.ON &&
-    (events.length === 0 || getNoOfEventsForState(events, EVENT_STATES.ON) === events.length)
-  )
+  //Validations
+  if (initial === EVENT_STATES.ON && (events.length === 0 || getNoOfEventsForState(events, EVENT_STATES.ON) === events.length))
     return 0;
-  if (
-    initial === EVENT_STATES.OFF &&
-    (events.length === 0 || getNoOfEventsForState(events, EVENT_STATES.OFF) === events.length)
-  )
+  if (initial === EVENT_STATES.OFF && (events.length === 0 || getNoOfEventsForState(events, EVENT_STATES.OFF) === events.length))
     return 0;
   if (
     initial === EVENT_STATES.AUTO_OFF &&
@@ -138,9 +151,7 @@ const calculateEnergySavings = (profile) => {
 
   let totalEnergySavings = 0;
   let filteredMap = {};
-  let filteredEvents = events.filter(
-    (event) => event.state === EVENT_STATES.ON || event.state === EVENT_STATES.AUTO_OFF
-  );
+  let filteredEvents = events.filter((event) => event.state === EVENT_STATES.ON || event.state === EVENT_STATES.AUTO_OFF);
 
   filteredEvents.forEach((event, index) => {
     filteredMap[index] = event;
@@ -217,6 +228,12 @@ const getTimestampRangeForDay = (day) => {
   return [MAX_IN_PERIOD * (day - 1), MAX_IN_PERIOD * day];
 };
 
+/**
+ * Returns daily energy usage
+ * @param {object} monthUsageProfile
+ * @param {number} day
+ * @returns
+ */
 const calculateEnergyUsageForDay = (monthUsageProfile, day) => {
   let startState;
   let usageEventsForDay = [];
@@ -229,12 +246,13 @@ const calculateEnergyUsageForDay = (monthUsageProfile, day) => {
 
   const timestampRangeForDay = getTimestampRangeForDay(day);
 
-  //Edgecases, when day is out of range of data
+  //Edge-cases, when requested day is out of range of data
   if (events.length > 0 && timestampRangeForDay[0] > events[events.length - 1].timestamp) {
     let lastEvent = events[events.length - 1];
     if (lastEvent.state === EVENT_STATES.ON) return MAX_IN_PERIOD;
   }
 
+  //populate events array for given day
   for (let i = 0; i <= events.length - 1; i++) {
     let event = events[i];
     if (event.timestamp >= timestampRangeForDay[0] && event.timestamp <= timestampRangeForDay[1]) {
