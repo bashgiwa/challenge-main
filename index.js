@@ -1,6 +1,10 @@
 /* The maximum number of minutes in a period (a day) */
 
 const MAX_IN_PERIOD = 1440;
+const EVENT_STATES = {
+  ON: 'on',
+  OFF: 'off',
+};
 
 /**
  * PART 1
@@ -36,7 +40,47 @@ const MAX_IN_PERIOD = 1440;
  * ```
  */
 
-const calculateEnergyUsageSimple = (profile) => {}
+const getNoOfEventsForState = (events, state) => {
+  return events.filter((event) => event.state === state).length;
+};
+
+const calculateEnergyUsageSimple = (profile) => {
+  const { initial, events } = profile;
+
+  if (
+    initial === EVENT_STATES.ON &&
+    (events.length === 0 ||
+      getNoOfEventsForState(events, EVENT_STATES.ON) === events.length)
+  )
+    return MAX_IN_PERIOD;
+  if (
+    initial === EVENT_STATES.OFF &&
+    (events.length === 0 ||
+      getNoOfEventsForState(events, EVENT_STATES.OFF) === events.length)
+  )
+    return 0;
+
+  let totalEnergyUsage = 0;
+  for (let i = 0; i <= events.length - 1; i++) {
+    let currentEvent = events[i];
+    if (i === 0) {
+      if (initial === EVENT_STATES.ON)
+        totalEnergyUsage += currentEvent.timestamp;
+    } else if (
+      i === events.length - 1 &&
+      currentEvent.state === EVENT_STATES.ON
+    ) {
+      totalEnergyUsage += MAX_IN_PERIOD - currentEvent.timestamp;
+    } else {
+      let previousEvent = events[i - 1];
+      if (previousEvent.state === EVENT_STATES.ON) {
+        totalEnergyUsage += currentEvent.timestamp - previousEvent.timestamp;
+      }
+    }
+  }
+
+  return totalEnergyUsage;
+};
 
 /**
  * PART 2

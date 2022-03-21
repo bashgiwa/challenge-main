@@ -43,6 +43,14 @@ describe('calculateEnergyUsageSimple', () => {
     expect(calculateEnergyUsageSimple(usageProfile3)).toEqual(1440);
   });
 
+  it('should calculate correctly when the appliance is off the whole time', () => {
+    const usageProfile3 = {
+      initial: 'off',
+      events: [],
+    };
+    expect(calculateEnergyUsageSimple(usageProfile3)).toEqual(0);
+  });
+
   it('should handle duplicate on events', () => {
     const usageProfile = {
       initial: 'off',
