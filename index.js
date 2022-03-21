@@ -4,6 +4,7 @@ const MAX_IN_PERIOD = 1440;
 const EVENT_STATES = {
   ON: 'on',
   OFF: 'off',
+  AUTO_OFF: 'auto-off',
 };
 
 /**
@@ -114,7 +115,77 @@ const calculateEnergyUsageSimple = (profile) => {
  * and not manual intervention.
  */
 
-const calculateEnergySavings = (profile) => {};
+const calculateEnergySavings = (profile) => {
+  const { initial, events } = profile;
+  //Edge-cases
+  if (
+    initial === EVENT_STATES.ON &&
+    (events.length === 0 ||
+      getNoOfEventsForState(events, EVENT_STATES.ON) === events.length)
+  )
+    return 0;
+  if (
+    initial === EVENT_STATES.OFF &&
+    (events.length === 0 ||
+      getNoOfEventsForState(events, EVENT_STATES.OFF) === events.length)
+  )
+    return 0;
+  if (
+    initial === EVENT_STATES.AUTO_OFF &&
+    (events.length === 0 ||
+      getNoOfEventsForState(events, EVENT_STATES.AUTO_OFF) === events.length)
+  )
+    return MAX_IN_PERIOD;
+
+  let totalEnergySavings = 0;
+  let filteredMap = {};
+  let filteredEvents = events.filter(
+    (event) =>
+      event.state === EVENT_STATES.ON || event.state === EVENT_STATES.AUTO_OFF
+  );
+
+  filteredEvents.forEach((event, index) => {
+    filteredMap[index] = event;
+  });
+
+  const getPrevInFilteredMap = (index) => {
+    let output = undefined;
+    while (index > 0) {
+      if (
+        filteredMap[index] &&
+        filteredMap[index].state === EVENT_STATES.AUTO_OFF
+      ) {
+        output = filteredMap[index];
+        delete filteredMap[index];
+        break;
+      }
+      index--;
+    }
+    return output;
+  };
+
+  for (let i = 0; i <= filteredEvents.length - 1; i++) {
+    let currentEvent = filteredEvents[i];
+    if (i === 0) {
+      if (initial === EVENT_STATES.AUTO_OFF)
+        totalEnergySavings += currentEvent.timestamp;
+    } else if (
+      i === filteredEvents.length - 1 &&
+      currentEvent.state === EVENT_STATES.AUTO_OFF
+    ) {
+      totalEnergySavings += MAX_IN_PERIOD - currentEvent.timestamp;
+    } else {
+      if (currentEvent.state === EVENT_STATES.ON) {
+        let previousEvent = getPrevInFilteredMap(i);
+        if (previousEvent) {
+          totalEnergySavings +=
+            currentEvent.timestamp - previousEvent.timestamp;
+        }
+      }
+    }
+  }
+  return totalEnergySavings;
+};
 
 /**
  * PART 3
