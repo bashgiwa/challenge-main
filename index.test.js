@@ -15,9 +15,7 @@ describe('calculateEnergyUsageSimple', () => {
         { timestamp: 833, state: 'on' },
       ],
     };
-    expect(calculateEnergyUsageSimple(usageProfile1)).toEqual(
-      126 + (1440 - 833)
-    );
+    expect(calculateEnergyUsageSimple(usageProfile1)).toEqual(126 + (1440 - 833));
   });
 
   it('should calculate correctly for a simple usage profile with initial state = "off"', () => {
@@ -30,9 +28,7 @@ describe('calculateEnergyUsageSimple', () => {
         { timestamp: 656, state: 'off' },
       ],
     };
-    expect(calculateEnergyUsageSimple(usageProfile2)).toEqual(
-      80 - 30 + (656 - 150)
-    );
+    expect(calculateEnergyUsageSimple(usageProfile2)).toEqual(80 - 30 + (656 - 150));
   });
 
   it('should calculate correctly when the appliance is on the whole time', () => {
@@ -61,9 +57,7 @@ describe('calculateEnergyUsageSimple', () => {
         { timestamp: 656, state: 'on' },
       ],
     };
-    expect(calculateEnergyUsageSimple(usageProfile)).toEqual(
-      150 - 30 + (1440 - 656)
-    );
+    expect(calculateEnergyUsageSimple(usageProfile)).toEqual(150 - 30 + (1440 - 656));
   });
 
   it('should handle duplicate off events', () => {
@@ -76,9 +70,7 @@ describe('calculateEnergyUsageSimple', () => {
         { timestamp: 656, state: 'on' },
       ],
     };
-    expect(calculateEnergyUsageSimple(usageProfile)).toEqual(
-      80 - 0 + (1440 - 656)
-    );
+    expect(calculateEnergyUsageSimple(usageProfile)).toEqual(80 - 0 + (1440 - 656));
   });
 });
 
@@ -123,9 +115,7 @@ describe('calculateEnergySavings', () => {
         { state: 'auto-off', timestamp: 1320 },
       ],
     };
-    expect(calculateEnergySavings(usageProfile)).toEqual(
-      933 - 500 + (MAX_IN_PERIOD - 1320)
-    );
+    expect(calculateEnergySavings(usageProfile)).toEqual(933 - 500 + (MAX_IN_PERIOD - 1320));
   });
 
   it('should calculate energy savings correctly on silly data (example 1)', () => {
@@ -144,9 +134,7 @@ describe('calculateEnergySavings', () => {
         { state: 'auto-off', timestamp: 1320 },
       ],
     };
-    expect(calculateEnergySavings(usageProfile)).toEqual(
-      933 - 500 + (MAX_IN_PERIOD - 1320)
-    );
+    expect(calculateEnergySavings(usageProfile)).toEqual(933 - 500 + (MAX_IN_PERIOD - 1320));
   });
 
   it('should calculate energy savings correctly on silly data (example 2)', () => {
@@ -184,24 +172,16 @@ describe('calculateEnergyUsageForDay', () => {
   };
 
   it('should calculate the energy usage for an empty set of events correctly', () => {
-    expect(
-      calculateEnergyUsageForDay({ initial: 'off', events: [] }, 10)
-    ).toEqual(0);
-    expect(
-      calculateEnergyUsageForDay({ initial: 'on', events: [] }, 5)
-    ).toEqual(1440);
+    expect(calculateEnergyUsageForDay({ initial: 'off', events: [] }, 10)).toEqual(0);
+    expect(calculateEnergyUsageForDay({ initial: 'on', events: [] }, 5)).toEqual(1440);
   });
 
   it('should calculate day 1 correctly', () => {
-    expect(calculateEnergyUsageForDay(monthProfile, 1)).toEqual(
-      500 - 0 + (1400 - 900)
-    );
+    expect(calculateEnergyUsageForDay(monthProfile, 1)).toEqual(500 - 0 + (1400 - 900));
   });
 
   it('should calculate day 2 correctly', () => {
-    expect(calculateEnergyUsageForDay(monthProfile, 2)).toEqual(
-      1900 - 1700 + (2880 - 2599)
-    );
+    expect(calculateEnergyUsageForDay(monthProfile, 2)).toEqual(1900 - 1700 + (2880 - 2599));
   });
 
   it('should calculate day 3 correctly', () => {
@@ -211,9 +191,7 @@ describe('calculateEnergyUsageForDay', () => {
   });
 
   it('should calculate day 4 correctly', () => {
-    expect(calculateEnergyUsageForDay(monthProfile, 4)).toEqual(
-      4420 - 4320 + (5760 - 4500)
-    );
+    expect(calculateEnergyUsageForDay(monthProfile, 4)).toEqual(4420 - 4320 + (5760 - 4500));
   });
 
   it('should calculate day 5 correctly', () => {
@@ -227,28 +205,18 @@ describe('calculateEnergyUsageForDay', () => {
     };
     expect(calculateEnergyUsageForDay(monthProfile1, 2)).toEqual(0);
     expect(calculateEnergyUsageForDay(monthProfile1, 4)).toEqual(1260);
-    expect(calculateEnergyUsageForDay(monthProfile1, 15)).toEqual(
-      MAX_IN_PERIOD
-    );
+    expect(calculateEnergyUsageForDay(monthProfile1, 15)).toEqual(MAX_IN_PERIOD);
   });
 
   it('should throw an error on an out of range day number', () => {
     // The regular expression matches the message of the Error(), which is
     // the first parameter to the Error class constructor.
-    expect(() => calculateEnergyUsageForDay(monthProfile, -5)).toThrow(
-      /day out of range/
-    );
-    expect(() => calculateEnergyUsageForDay(monthProfile, 0)).toThrow(
-      /day out of range/
-    );
-    expect(() => calculateEnergyUsageForDay(monthProfile, 366)).toThrow(
-      /day out of range/
-    );
+    expect(() => calculateEnergyUsageForDay(monthProfile, -5)).toThrow(/day out of range/);
+    expect(() => calculateEnergyUsageForDay(monthProfile, 0)).toThrow(/day out of range/);
+    expect(() => calculateEnergyUsageForDay(monthProfile, 366)).toThrow(/day out of range/);
   });
 
   it('should throw an error on a non-integer day number', () => {
-    expect(() => calculateEnergyUsageForDay(3.76)).toThrow(
-      /must be an integer/
-    );
+    expect(() => calculateEnergyUsageForDay(3.76)).toThrow(/must be an integer/);
   });
 });

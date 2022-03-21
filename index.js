@@ -60,16 +60,21 @@ const calculateEnergyUsage = (profile, lowerBound, upperBound) => {
     return 0;
 
   let totalEnergyUsage = 0;
-  for (let i = 0; i <= events.length - 1; i++) {
-    let currentEvent = events[i];
-    if (i === 0) {
-      if (initial === EVENT_STATES.ON) totalEnergyUsage += currentEvent.timestamp - lowerBound;
-    } else if (i === events.length - 1 && currentEvent.state === EVENT_STATES.ON) {
-      totalEnergyUsage += upperBound - currentEvent.timestamp;
-    } else {
-      let previousEvent = events[i - 1];
-      if (previousEvent.state === EVENT_STATES.ON) {
-        totalEnergyUsage += currentEvent.timestamp - previousEvent.timestamp;
+
+  if (events.length === 1) {
+    if (events[0].state === EVENT_STATES.ON) totalEnergyUsage += upperBound - events[0].timestamp;
+  } else {
+    for (let i = 0; i <= events.length - 1; i++) {
+      let currentEvent = events[i];
+      if (i === 0) {
+        if (initial === EVENT_STATES.ON) totalEnergyUsage += currentEvent.timestamp - lowerBound;
+      } else if (i === events.length - 1 && currentEvent.state === EVENT_STATES.ON) {
+        totalEnergyUsage += upperBound - currentEvent.timestamp;
+      } else {
+        let previousEvent = events[i - 1];
+        if (previousEvent.state === EVENT_STATES.ON) {
+          totalEnergyUsage += currentEvent.timestamp - previousEvent.timestamp;
+        }
       }
     }
   }
@@ -213,8 +218,6 @@ const getTimestampRangeForDay = (day) => {
 };
 
 const calculateEnergyUsageForDay = (monthUsageProfile, day) => {
-  let upperBoundDiff;
-  let lowerBoundDiff;
   let startState;
   let usageEventsForDay = [];
 
@@ -225,6 +228,12 @@ const calculateEnergyUsageForDay = (monthUsageProfile, day) => {
   if (!isInRange(day)) showErrorMessage('day out of range');
 
   const timestampRangeForDay = getTimestampRangeForDay(day);
+
+  //Edgecases, when day is out of range of data
+  if (events.length > 0 && timestampRangeForDay[0] > events[events.length - 1].timestamp) {
+    let lastEvent = events[events.length - 1];
+    if (lastEvent.state === EVENT_STATES.ON) return MAX_IN_PERIOD;
+  }
 
   for (let i = 0; i <= events.length - 1; i++) {
     let event = events[i];
@@ -237,16 +246,6 @@ const calculateEnergyUsageForDay = (monthUsageProfile, day) => {
     }
   }
 
-  //Handle overlapping events
-  const firstEventInDay = usageEventsForDay[0];
-  const lastEventInDay = usageEventsForDay[usageEventsForDay.length - 1];
-
-  if (usageEventsForDay.length > 0) {
-    if (firstEventInDay.state === EVENT_STATES.ON)
-      lowerBoundDiff = timestampRangeForDay[0] - usageEventsForDay[0].timestamp;
-    if (lastEventInDay.state === EVENT_STATES.ON)
-      upperBoundDiff = timestampRangeForDay[1] - lastEventInDay.timestamp;
-  }
   let energyUsageInRange = calculateEnergyUsage(
     {
       initial: startState || initial,
