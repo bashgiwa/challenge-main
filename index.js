@@ -45,19 +45,17 @@ const getNoOfEventsForState = (events, state) => {
   return events.filter((event) => event.state === state).length;
 };
 
-const calculateEnergyUsageSimple = (profile) => {
+const calculateEnergyUsage = (profile, lowerBound, upperBound) => {
   const { initial, events } = profile;
 
   if (
     initial === EVENT_STATES.ON &&
-    (events.length === 0 ||
-      getNoOfEventsForState(events, EVENT_STATES.ON) === events.length)
+    (events.length === 0 || getNoOfEventsForState(events, EVENT_STATES.ON) === events.length)
   )
     return MAX_IN_PERIOD;
   if (
     initial === EVENT_STATES.OFF &&
-    (events.length === 0 ||
-      getNoOfEventsForState(events, EVENT_STATES.OFF) === events.length)
+    (events.length === 0 || getNoOfEventsForState(events, EVENT_STATES.OFF) === events.length)
   )
     return 0;
 
@@ -65,13 +63,9 @@ const calculateEnergyUsageSimple = (profile) => {
   for (let i = 0; i <= events.length - 1; i++) {
     let currentEvent = events[i];
     if (i === 0) {
-      if (initial === EVENT_STATES.ON)
-        totalEnergyUsage += currentEvent.timestamp;
-    } else if (
-      i === events.length - 1 &&
-      currentEvent.state === EVENT_STATES.ON
-    ) {
-      totalEnergyUsage += MAX_IN_PERIOD - currentEvent.timestamp;
+      if (initial === EVENT_STATES.ON) totalEnergyUsage += currentEvent.timestamp - lowerBound;
+    } else if (i === events.length - 1 && currentEvent.state === EVENT_STATES.ON) {
+      totalEnergyUsage += upperBound - currentEvent.timestamp;
     } else {
       let previousEvent = events[i - 1];
       if (previousEvent.state === EVENT_STATES.ON) {
@@ -81,6 +75,9 @@ const calculateEnergyUsageSimple = (profile) => {
   }
 
   return totalEnergyUsage;
+};
+const calculateEnergyUsageSimple = (profile) => {
+  return calculateEnergyUsage(profile, 0, MAX_IN_PERIOD);
 };
 
 /**
@@ -120,28 +117,24 @@ const calculateEnergySavings = (profile) => {
   //Edge-cases
   if (
     initial === EVENT_STATES.ON &&
-    (events.length === 0 ||
-      getNoOfEventsForState(events, EVENT_STATES.ON) === events.length)
+    (events.length === 0 || getNoOfEventsForState(events, EVENT_STATES.ON) === events.length)
   )
     return 0;
   if (
     initial === EVENT_STATES.OFF &&
-    (events.length === 0 ||
-      getNoOfEventsForState(events, EVENT_STATES.OFF) === events.length)
+    (events.length === 0 || getNoOfEventsForState(events, EVENT_STATES.OFF) === events.length)
   )
     return 0;
   if (
     initial === EVENT_STATES.AUTO_OFF &&
-    (events.length === 0 ||
-      getNoOfEventsForState(events, EVENT_STATES.AUTO_OFF) === events.length)
+    (events.length === 0 || getNoOfEventsForState(events, EVENT_STATES.AUTO_OFF) === events.length)
   )
     return MAX_IN_PERIOD;
 
   let totalEnergySavings = 0;
   let filteredMap = {};
   let filteredEvents = events.filter(
-    (event) =>
-      event.state === EVENT_STATES.ON || event.state === EVENT_STATES.AUTO_OFF
+    (event) => event.state === EVENT_STATES.ON || event.state === EVENT_STATES.AUTO_OFF
   );
 
   filteredEvents.forEach((event, index) => {
@@ -151,10 +144,7 @@ const calculateEnergySavings = (profile) => {
   const getPrevInFilteredMap = (index) => {
     let output = undefined;
     while (index > 0) {
-      if (
-        filteredMap[index] &&
-        filteredMap[index].state === EVENT_STATES.AUTO_OFF
-      ) {
+      if (filteredMap[index] && filteredMap[index].state === EVENT_STATES.AUTO_OFF) {
         output = filteredMap[index];
         delete filteredMap[index];
         break;
@@ -167,19 +157,14 @@ const calculateEnergySavings = (profile) => {
   for (let i = 0; i <= filteredEvents.length - 1; i++) {
     let currentEvent = filteredEvents[i];
     if (i === 0) {
-      if (initial === EVENT_STATES.AUTO_OFF)
-        totalEnergySavings += currentEvent.timestamp;
-    } else if (
-      i === filteredEvents.length - 1 &&
-      currentEvent.state === EVENT_STATES.AUTO_OFF
-    ) {
+      if (initial === EVENT_STATES.AUTO_OFF) totalEnergySavings += currentEvent.timestamp;
+    } else if (i === filteredEvents.length - 1 && currentEvent.state === EVENT_STATES.AUTO_OFF) {
       totalEnergySavings += MAX_IN_PERIOD - currentEvent.timestamp;
     } else {
       if (currentEvent.state === EVENT_STATES.ON) {
         let previousEvent = getPrevInFilteredMap(i);
         if (previousEvent) {
-          totalEnergySavings +=
-            currentEvent.timestamp - previousEvent.timestamp;
+          totalEnergySavings += currentEvent.timestamp - previousEvent.timestamp;
         }
       }
     }
@@ -215,7 +200,64 @@ const calculateEnergySavings = (profile) => {
 
 const isInteger = (number) => Number.isInteger(number);
 
-const calculateEnergyUsageForDay = (monthUsageProfile, day) => {};
+const showErrorMessage = (msg) => {
+  throw new Error(msg);
+};
+
+const isInRange = (value) => {
+  return value > 0 && value <= 365;
+};
+
+const getTimestampRangeForDay = (day) => {
+  return [MAX_IN_PERIOD * (day - 1), MAX_IN_PERIOD * day];
+};
+
+const calculateEnergyUsageForDay = (monthUsageProfile, day) => {
+  let upperBoundDiff;
+  let lowerBoundDiff;
+  let startState;
+  let usageEventsForDay = [];
+
+  const { initial, events } = monthUsageProfile;
+
+  //Validations
+  if (!isInteger(day)) showErrorMessage('must be an integer');
+  if (!isInRange(day)) showErrorMessage('day out of range');
+
+  const timestampRangeForDay = getTimestampRangeForDay(day);
+
+  for (let i = 0; i <= events.length - 1; i++) {
+    let event = events[i];
+    if (event.timestamp >= timestampRangeForDay[0] && event.timestamp <= timestampRangeForDay[1]) {
+      if (usageEventsForDay.length === 0) {
+        //first event found, store previous state here if available.
+        if (events[i - 1]) startState = events[i - 1].state;
+      }
+      usageEventsForDay.push(event);
+    }
+  }
+
+  //Handle overlapping events
+  const firstEventInDay = usageEventsForDay[0];
+  const lastEventInDay = usageEventsForDay[usageEventsForDay.length - 1];
+
+  if (usageEventsForDay.length > 0) {
+    if (firstEventInDay.state === EVENT_STATES.ON)
+      lowerBoundDiff = timestampRangeForDay[0] - usageEventsForDay[0].timestamp;
+    if (lastEventInDay.state === EVENT_STATES.ON)
+      upperBoundDiff = timestampRangeForDay[1] - lastEventInDay.timestamp;
+  }
+  let energyUsageInRange = calculateEnergyUsage(
+    {
+      initial: startState || initial,
+      events: usageEventsForDay,
+    },
+    timestampRangeForDay[0],
+    timestampRangeForDay[1]
+  );
+
+  return energyUsageInRange;
+};
 
 module.exports = {
   calculateEnergyUsageSimple,
